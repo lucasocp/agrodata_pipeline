@@ -1,23 +1,48 @@
-# AgroData Pipeline
+# 🌾 AgroData Pipeline
 
-Pipeline de dados orientado ao agronegócio com extração, transformação/validação com Pandas, carga em PostgreSQL e API REST com FastAPI.
+[![Python](https://img.shields.io/badge/Python-3.11-blue.svg)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110.0-009688.svg)](https://fastapi.tiangolo.com/)
+[![Pandas](https://img.shields.io/badge/Pandas-2.2.1-150458.svg)](https://pandas.pydata.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791.svg)](https://www.postgresql.org/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg)](https://www.docker.com/)
 
-## Melhores Práticas de Segurança
-- Credenciais e segredos gerenciados via variáveis de ambiente (`.env`).
-- `.env` incluído no `.gitignore` (nunca commitado no repositório).
-- Container executado com usuário não-root (`appuser`).
-- Exposição de portas vinculada ao `127.0.0.1` para prevenir acesso externo indevido.
+Um pipeline de dados orientado ao agronegócio focado em extração, validação, limpeza, engenharia de features e disponibilização de métricas agrícolas via API REST. Projetado seguindo princípios de **Clean Architecture**, **SOLID**, **DevSecOps** e **Data Quality**.
 
-## Como Executar
+---
 
-1. Copie o arquivo `.env.example` para `.env`:
-   ```bash
-   cp .env.example .env
-   ```
-2. Ajuste as senhas e credenciais no arquivo `.env`.
-3. Inicie os containers com Docker Compose:
-   ```bash
-   docker-compose up --build -d
-   ```
-4. Acesse a documentação Swagger da API:
-   `http://localhost:8000/docs`
+## 📐 Arquitetura do Projeto
+
+```text
+agrodata-pipeline/
+├── app/
+│   ├── __init__.py
+│   ├── config.py         # Configurações globais e Pydantic Settings
+│   ├── database.py       # Conexão SQLAlchemy e sessão do banco
+│   ├── etl.py            # Engine de ETL (Extract, Transform, Load)
+│   ├── main.py           # Aplicação FastAPI e Endpoints REST
+│   ├── models.py         # Modelos ORM (PostgreSQL)
+│   └── schemas.py        # Schemas de validação e serialização Pydantic
+├── data/
+│   └── raw_agro_data.csv # Dataset bruto de exemplo
+├── .env.example          # Template de variáveis de ambiente
+├── .gitignore            # Arquivos ignorados pelo Git
+├── Dockerfile            # Imagem Docker da API (Non-root user)
+├── docker-compose.yml    # Orquestração dos serviços (API + PostgreSQL)
+├── README.md             # Documentação do projeto
+└── requirements.txt      # Dependências do projeto
+🔄 Fluxo de Dados (Pipeline ETL)Extract: Leitura de dados brutos agrícolas a partir de fontes estruturadas (CSV, APIs).Transform & Data Quality:Padronização do esquema de colunas.Remoção de duplicatas com base em chaves compostas (farm_id, crop_type, harvest_date).Normalização de tipos de dados (datas, números, textos).Validação de regras de negócio (áreas e produções estritamente maiores que zero).Engine de Feature Engineering (Cálculo automático da produtividade em $ton/ha$).Load: Carga otimizada via bulk operations na tabela agro_production do PostgreSQL.Serve: Disponibilização dos dados e KPIs agregados através de endpoints da API REST.🔒 Princípios de Segurança (DevSecOps)Gestão de Segredos: Credenciais gerenciadas via .env (ignorado no versionamento Git pelo .gitignore).Princípio do Menor Privilégio: Container executado por usuário não-root (appuser).Isolamento de Rede: Portas vinculadas diretamente à interface local (127.0.0.1) no Docker Compose, evitando exposição indevida da base de dados.Validação Estrita de Input: Tipagem e validação com Pydantic e filtros sanitizados pelo ORM SQLAlchemy.🛠️ Tecnologias UtilizadasLinguagem: Python 3.11Processamento de Dados: Pandas, NumPyFramework Web / API: FastAPI, UvicornBanco de Dados & ORM: PostgreSQL, SQLAlchemy, Psycopg2Conteinerização: Docker, Docker Compose🚀 Como Executar o ProjetoPré-requisitosDocker instalado.Docker Compose instalado.Passo a PassoClonar o repositório:Bashgit clone [https://github.com/seu-usuario/agrodata-pipeline.git](https://github.com/seu-usuario/agrodata-pipeline.git)
+cd agrodata-pipeline
+Configurar as variáveis de ambiente:Copie o template .env.example para criar seu arquivo .env:Bashcp .env.example .env
+Iniciar a infraestrutura com Docker Compose:Bashdocker-compose up --build -d
+(Aguarde até que o container do PostgreSQL passe na verificação de healthcheck e a API seja iniciada).Verificar os containers em execução:Bashdocker-compose ps
+📌 Utilização da APIDocumentação Interativa (Swagger)Acesse a documentação no navegador para testar os endpoints interativamente:👉 http://localhost:8000/docsEndpoints Principais1. Executar o Pipeline ETLExecuta a ingestão, limpeza e carga dos dados contidos no arquivo CSV especificado.Método: POSTURL: /api/v1/etl/runExemplo de chamada:Bashcurl -X POST "http://localhost:8000/api/v1/etl/run"
+2. Consultar Dados de ProduçãoRetorna listagem dos dados agrícolas com paginação e filtros por cultura ou região.Método: GETURL: /api/v1/productionExemplo de chamada:Bashcurl -X GET "http://localhost:8000/api/v1/production?crop_type=Soja&region=CENTRO-OESTE"
+3. Consultar KPIs ConsolidadosCalcula e retorna métricas consolidadas (Área Total, Produção Total, Produtividade Média).Método: GETURL: /api/v1/production/kpisExemplo de chamada:Bashcurl -X GET "http://localhost:8000/api/v1/production/kpis?crop_type=Soja"
+📊 Exemplo de Resposta de KPIsJSON{
+  "total_area_hectares": 150.0,
+  "total_yield_tons": 520.5,
+  "average_productivity": 3.47,
+  "total_records": 1
+}
+🛑 Encerrando os ServiçosPara parar e remover os containers e redes mantendo a persistência dos dados:Bashdocker-compose down
+Para remover também o volume de dados do PostgreSQL:Bashdocker-compose down -v
